@@ -1,1 +1,1 @@
-# foundryvtt-custom-measure-tool
+# foundryvtt-custom-ruler
