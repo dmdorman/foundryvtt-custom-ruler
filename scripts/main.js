@@ -1,7 +1,5 @@
 Hooks.on("init", function() {
     CustomRuler.initialize()
-
-    //CustomRuler.log(false, Ruler)
 });
 
 Hooks.once('devModeReady', ({ registerPackageDebugFlag }) => {
@@ -19,20 +17,6 @@ Hooks.on("renderApplication", (controls, ...args) => {
         CustomRuler.customRulerForm.render(true, {userId})
     }
 });
-
-/*
-Hooks.once("init", () => {
-    Ruler.prototype._getSegmentLabel = function _getSegmentLabel(segmentDistance, totalDistance, isTotal) {
-        let rangeMod = Math.ceil(Math.log2(totalDistance / 8)) * 2;
-
-        rangeMod = rangeMod < 0 ? 0: rangeMod;
-
-        let label = "[" + Math.round(segmentDistance.distance) + " m]" +  "\n-" + rangeMod + " Range Modifier"
-
-        return label
-    };
-})
-*/
 
 /**
  * A single CustomRuler
@@ -135,23 +119,16 @@ class CustomRulerData {
         }
 
         static setRuler(userId) {
+            /*
             const relevantCustomRuler = CustomRulerData.getActiveRulerForUser(userId)
-            CustomRuler.log(false, "-------------------")
-            CustomRuler.log(false, relevantCustomRuler.label)
+
             if (relevantCustomRuler.label === CustomRuler.SYSTEMRULER) {
                 CustomRuler.log(false, "lets use the system ruler!")
-
-                CustomRuler.log(false, CustomRuler.systemRuler)
-                CustomRuler.log(false, CustomRuler.systemRuler.prototype._getSegmentLabel)
-
-                CustomRuler.log(false, CustomRuler.systemRulerGetSegement)
-                Ruler.prototype._getSegmentLabel = CustomRuler.systemRuler.prototype._getSegmentLabel
+                Ruler.prototype._getSegmentLabel = CustomRuler.systemRuler._getSegmentLabel
 
                 return
             }
-
-            CustomRuler.log(false, "8888888888888888888888888")
-
+            */
 
             Ruler.prototype._getSegmentLabel = function _getSegmentLabel(segmentDistance, totalDistance, isTotal) {
                 const relevantCustomRuler = CustomRulerData.getActiveRulerForUser(userId)
@@ -173,11 +150,6 @@ class CustomRuler {
     static initialize() {
         this.customRulerForm = new CustomRulerForm()
 
-        //this.systemRuler = Ruler
-        this.systemRuler = Object.create(Ruler);
-        //this.systemRuler = Object.assign({}, Ruler);
-        this.systemRulerGetSegement = Ruler.prototype._getSegmentLabel().bind({})
-
         // gm can see all custom rulers
         game.settings.register(this.ID, this.SETTINGS.GM_CAN_SEE_ALL, {
             name: `CUSTOM-RULER.settings.${this.SETTINGS.GM_CAN_SEE_ALL}.Name`,
@@ -186,6 +158,36 @@ class CustomRuler {
             scope: 'world',
             config: true,
             hint: `CUSTOM-RULER.settings.${this.SETTINGS.GM_CAN_SEE_ALL}.Hint`,
+            onChange: () => ui.players.render()
+        })
+
+        game.settings.register(this.ID, this.SETTINGS.SYSTEM_RULER_EQUATION, {
+            name: `CUSTOM-RULER.settings.${this.SETTINGS.SYSTEM_RULER_EQUATION}.Name`,
+            default: "",
+            type: String,
+            scope: 'world',
+            config: true,
+            hint: `CUSTOM-RULER.settings.${this.SETTINGS.SYSTEM_RULER_EQUATION}.Hint`,
+            onChange: () => ui.players.render()
+        })
+
+        game.settings.register(this.ID, this.SETTINGS.SYSTEM_RULER_LOWER_BOUND, {
+            name: `CUSTOM-RULER.settings.${this.SETTINGS.SYSTEM_RULER_LOWER_BOUND}.Name`,
+            default: "",
+            type: String,
+            scope: 'world',
+            config: true,
+            hint: `CUSTOM-RULER.settings.${this.SETTINGS.SYSTEM_RULER_LOWER_BOUND}.Hint`,
+            onChange: () => ui.players.render()
+        })
+
+        game.settings.register(this.ID, this.SETTINGS.SYSTEM_RULER_UPPER_BOUND, {
+            name: `CUSTOM-RULER.settings.${this.SETTINGS.SYSTEM_RULER_UPPER_BOUND}.Name`,
+            default: "",
+            type: String,
+            scope: 'world',
+            config: true,
+            hint: `CUSTOM-RULER.settings.${this.SETTINGS.SYSTEM_RULER_UPPER_BOUND}.Hint`,
             onChange: () => ui.players.render()
         })
     }
@@ -201,7 +203,10 @@ class CustomRuler {
     }
 
     static SETTINGS = {
-        GM_CAN_SEE_ALL: 'gm-can-see-all'
+        GM_CAN_SEE_ALL: 'gm-can-see-all',
+        SYSTEM_RULER_EQUATION: 'system_ruler_equation',
+        SYSTEM_RULER_LOWER_BOUND: 'system_ruler_lower_bound',
+        SYSTEM_RULER_UPPER_BOUND: 'system_ruler_upper_bound',
     }
 
     static SYSTEMRULER = "system ruler"
