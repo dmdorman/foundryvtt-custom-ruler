@@ -1,3 +1,12 @@
 {
-    "title": "Custom Ruler Select"
+    "CUSTOM-RULER": {
+        "title": "Custom Ruler Select",
+        "add": "Add New Ruler",
+        "confirm": {
+            "deleteConfirm" : {
+                "Title": "Delete?",
+                "Content": "Are you sure you want to delete this ruler? This cannot be undone"
+            }
+        }
+    }
 }

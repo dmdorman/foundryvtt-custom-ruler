@@ -1,7 +1,7 @@
 {
-    "id": "custom-measure-tool",
-    "title": "Custom Measure Tool",
-    "description": "A simple module for changing measure tool behavior",
+    "id": "custom-ruler",
+    "title": "Custom Ruler",
+    "description": "A simple module for changing ruler behavior",
     "authors": [
         {
             "name": "BoDiddleyBeat"
@@ -16,7 +16,7 @@
         "scripts/main.js"
     ],
     "styles": [
-        "styles/custom-measure-tool.css"
+        "styles/custom-ruler.css"
     ],
     "languages": [
         {
@@ -25,10 +25,10 @@
             "path": "lang/en.json"
         }
     ],
-    "url": "https://github.com/dmdorman/foundryvtt-custom-measure-tool",
-    "manifest": "https://raw.githubusercontent.com/dmdorman/foundryvtt-custom-measure-tool/v1.0.0-alpha/module.json",
-    "download": "https://github.com/dmdorman/foundryvtt-custom-measure-tool/archive/refs/heads/v1.0.0-alpha.zip",
-    "license": "https://raw.githubusercontent.com/dmdorman/foundryvtt-custom-measure-tool/v1.0.0-alpha/LICENSE",
-    "changelog": "https://github.com/dmdorman/foundryvtt-custom-measure-tool/blob/v1.0.0-alpha/CHANGELOG.md",
-    "bugs": "https://github.com/dmdorman/foundryvtt-custom-measure-tool/issues"
+    "url": "https://github.com/dmdorman/foundryvtt-custom-ruler",
+    "manifest": "https://raw.githubusercontent.com/dmdorman/foundryvtt-custom-ruler/v1.0.0-alpha/module.json",
+    "download": "https://github.com/dmdorman/foundryvtt-custom-ruler/archive/refs/heads/v1.0.0-alpha.zip",
+    "license": "https://raw.githubusercontent.com/dmdorman/foundryvtt-custom-ruler/v1.0.0-alpha/LICENSE",
+    "changelog": "https://github.com/dmdorman/foundryvtt-custom-ruler/blob/v1.0.0-alpha/CHANGELOG.md",
+    "bugs": "https://github.com/dmdorman/foundryvtt-custom-ruler/issues"
 }

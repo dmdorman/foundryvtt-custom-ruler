@@ -1,35 +1,22 @@
 Hooks.on("init", function() {
-    CMT.initialize()
+    CustomRuler.initialize()
 
-    CMT.log(false, 'hello world!')
+    //CustomRuler.log(false, Ruler)
 });
-
 
 Hooks.once('devModeReady', ({ registerPackageDebugFlag }) => {
-    registerPackageDebugFlag(CMT.ID);
-});
-
-Hooks.on("getSceneControlButtons", (controls) => {
-    // CMT.log(false, "--------------------------------");
-    // CMT.log(false, "getSceneControlButtons");
-    // CMT.log(false, controls)
-    // CMT.log(false, controls.filter(e => e.name === "token"))
-    // CMT.log(false, controls.filter(e => e.name === "token")[0].tools)
-    // CMT.log(false, controls.filter(e => e.name === "token")[0].tools.filter(e => e.name === "ruler"))
-
-    // CMT.log(false, game)
-
-    // CMT.log(false, "--------------------------------");
-
+    registerPackageDebugFlag(CustomRuler.ID);
 });
 
 Hooks.on("renderApplication", (controls, ...args) => {
-    CMT.log(false, "renderApplication");
+    CustomRuler.log(false, "renderApplication");
 
-    CMT.log(false, controls.tool)
     if (controls.tool === "ruler") {
-        // render selector
-        CMTForm.cmtForm.render(true, {userId})
+        const userId = game.userId;
+
+        CustomRuler.customRulerForm.verifySystemRulerExists(userId)
+
+        CustomRuler.customRulerForm.render(true, {userId})
     }
 });
 
@@ -47,104 +34,177 @@ Hooks.once("init", () => {
 })
 */
 
-/*
-Hooks.on("getSceneControlButtons", (controls) => {
-    controls[0].tools.push({
-    name: 'measure',
-    title: 'Velocity Tracker',
-    icon: 'far fa-right',
-    button: true,
-    //onClick: () => new VelocityTracker().render(true),
-    onClick: () => {
-        const userId = game.userId;
-        VelocityTrackerList.velocityTracker.render(true, {userId})
-    },
-    visible: true
-    })
-});
-*/
+/**
+ * A single CustomRuler
+ * @typedef {Object} CustomRuler
+ * @property {string} userId - the user's id which owns this VelocityTracker
+ * @property {string} id - A unique ID to identify this VelocityTracker
+ * @property {string} label - The name of the character/vehicle being tracked
+ * @property {string} equation - rules for the new ruler
+ * @property {Boolean} active - which ruler is being used
+ * @property {float} lowerBound - which ruler is being used
+ * @property {float} upperBound - which ruler is being used
+ * @property {Boolean} protected - can a ruler be edited? These would be system rulers or those defined by the GM
+ */
+class CustomRulerData {
+        static get allCustomRulers() {
+            const allCustomRulers = game.users.reduce((accumulator, user) => {
+                const userVelocityTrackers = this.getCustomRulersForUser(user.id);
+    
+                return {
+                    ...accumulator,
+                    ...userVelocityTrackers
+                }
+            }, {});
+    
+            return allCustomRulers
+        }
+        
+        static getCustomRulersForUser(userId) {
+            return game.users.get(userId)?.getFlag(CustomRuler.ID, CustomRuler.FLAGS.CUSTOMRULER)
+        }
 
-class CMT {
+        static getActiveRulerForUser(userId) {
+            for (const [key, value] of Object.entries(this.getCustomRulersForUser(userId))) {
+                CustomRuler.log(false, value)
+                if (value.active) return this.allCustomRulers[key]
+            }
+        }
+
+        static otherUsersCustomRulers(userId) {
+            const otherUsersCustomRulers = game.users.reduce((accumulator, user) => {1
+                if (user.id !== userId) {
+                    const userCustomRulers = this.getCustomRulersForUser(user.id);
+    
+                    return {
+                        ...accumulator,
+                        ...userCustomRulers
+                    }
+                }
+            }, {});
+    
+            return otherUsersCustomRulers
+        }
+    
+        static createCustomRuler(userId, data) {
+            CustomRuler.log(false, data)
+
+            const newCustomRuler = {
+                userId,
+                id: foundry.utils.randomID(16),
+                equation: "",
+                lowerBound: null,
+                upperBound: null,
+                active: false,
+                ...data
+            }
+    
+            const update = {
+                [newCustomRuler.id]: newCustomRuler
+            }
+    
+            return game.users.get(userId)?.setFlag(CustomRuler.ID, CustomRuler.FLAGS.CUSTOMRULER, update)
+        }
+    
+        static updateCustomRuler(customRulerId, updateData) {
+            const relevantCustomRuler = this.allCustomRulers[customRulerId];
+    
+            const update = {
+                [customRulerId]: updateData
+            }
+    
+            return game.users.get(relevantCustomRuler.userId)?.setFlag(CustomRuler.ID, CustomRuler.FLAGS.CUSTOMRULER, update);
+        }
+    
+        static updateUserCustomRuler(userId, updateData) {
+            return game.users.get(userId)?.setFlag(CustomRuler.ID, CustomRuler.FLAGS.CUSTOMRULER, updateData);
+        }
+    
+        static deleteCustomRuler(customRulerId) {
+            CustomRuler.log(false, customRulerId)
+
+            const relevantCustomRuler = this.allCustomRulers[customRulerId];
+    
+            const keyDeletion = {
+                [`-=${customRulerId}`]: null
+            }
+
+            CustomRuler.log(false, relevantCustomRuler)
+    
+            return game.users.get(relevantCustomRuler.userId)?.setFlag(CustomRuler.ID, CustomRuler.FLAGS.CUSTOMRULER, keyDeletion)
+        }
+
+        static setRuler(userId) {
+            const relevantCustomRuler = CustomRulerData.getActiveRulerForUser(userId)
+            CustomRuler.log(false, "-------------------")
+            CustomRuler.log(false, relevantCustomRuler.label)
+            if (relevantCustomRuler.label === CustomRuler.SYSTEMRULER) {
+                CustomRuler.log(false, "lets use the system ruler!")
+
+                CustomRuler.log(false, CustomRuler.systemRuler)
+                CustomRuler.log(false, CustomRuler.systemRuler.prototype._getSegmentLabel)
+
+                CustomRuler.log(false, CustomRuler.systemRulerGetSegement)
+                Ruler.prototype._getSegmentLabel = CustomRuler.systemRuler.prototype._getSegmentLabel
+
+                return
+            }
+
+            CustomRuler.log(false, "8888888888888888888888888")
+
+
+            Ruler.prototype._getSegmentLabel = function _getSegmentLabel(segmentDistance, totalDistance, isTotal) {
+                const relevantCustomRuler = CustomRulerData.getActiveRulerForUser(userId)
+
+                let newDistance = eval(relevantCustomRuler.equation.replaceAll("x", segmentDistance.distance.toString()))
+                
+                if (relevantCustomRuler.lowerBound !== null) newDistance = Math.max(newDistance, relevantCustomRuler.lowerBound)
+
+                if (relevantCustomRuler.upperBound !== null) newDistance = Math.min(newDistance, relevantCustomRuler.upperBound)
+
+                let output = "[" + Math.round(segmentDistance.distance) + " m]\n" + newDistance + " " + relevantCustomRuler.label
+        
+                return output
+            };
+        }
+}
+
+class CustomRuler {
     static initialize() {
-        this.cmtForm = new CMTForm()
+        this.customRulerForm = new CustomRulerForm()
 
-        /*
-        // gm can see all velocity trackers
+        //this.systemRuler = Ruler
+        this.systemRuler = Object.create(Ruler);
+        //this.systemRuler = Object.assign({}, Ruler);
+        this.systemRulerGetSegement = Ruler.prototype._getSegmentLabel().bind({})
+
+        // gm can see all custom rulers
         game.settings.register(this.ID, this.SETTINGS.GM_CAN_SEE_ALL, {
-            name: `VELOCITY-TRACKER.settings.${this.SETTINGS.GM_CAN_SEE_ALL}.Name`,
+            name: `CUSTOM-RULER.settings.${this.SETTINGS.GM_CAN_SEE_ALL}.Name`,
             default: true,
             type: Boolean,
             scope: 'world',
             config: true,
-            hint: `VELOCITY-TRACKER.settings.${this.SETTINGS.GM_CAN_SEE_ALL}.Hint`,
+            hint: `CUSTOM-RULER.settings.${this.SETTINGS.GM_CAN_SEE_ALL}.Hint`,
             onChange: () => ui.players.render()
         })
-
-        // distance units setting
-        game.settings.register(this.ID, this.SETTINGS.DISTANCE_UNITS, {
-            name: `VELOCITY-TRACKER.settings.${this.SETTINGS.DISTANCE_UNITS}.Name`,
-            default: "m/s",
-            type: String,
-            scope: 'world',
-            config: true,
-            hint: `VELOCITY-TRACKER.settings.${this.SETTINGS.DISTANCE_UNITS}.Hint`,
-            onChange: () => ui.players.render()
-        })
-
-        // time units setting
-        game.settings.register(this.ID, this.SETTINGS.TIME_UNITS, {
-            name: `VELOCITY-TRACKER.settings.${this.SETTINGS.TIME_UNITS}.Name`,
-            default: "m/s",
-            type: String,
-            scope: 'world',
-            config: true,
-            hint: `VELOCITY-TRACKER.settings.${this.SETTINGS.TIME_UNITS}.Hint`,
-            onChange: () => ui.players.render()
-        })
-
-        // default action time
-        game.settings.register(this.ID, this.SETTINGS.DEFAULT_ACTION_TIME, {
-            name: `VELOCITY-TRACKER.settings.${this.SETTINGS.DEFAULT_ACTION_TIME}.Name`,
-            default: 1,
-            type: Number,
-            scope: 'world',
-            config: true,
-            hint: `VELOCITY-TRACKER.settings.${this.SETTINGS.DEFAULT_ACTION_TIME}.Hint`,
-            onChange: () => ui.players.render()
-        })
-
-        // default acceleration
-        game.settings.register(this.ID, this.SETTINGS.DEFAULT_ACCELERATION, {
-            name: `VELOCITY-TRACKER.settings.${this.SETTINGS.DEFAULT_ACCELERATION}.Name`,
-            default: 0,
-            type: Number,
-            scope: 'world',
-            config: true,
-            hint: `VELOCITY-TRACKER.settings.${this.SETTINGS.DEFAULT_ACCELERATION}.Hint`,
-            onChange: () => ui.players.render()
-        })
-        */
     }
 
-    static ID = 'custom-measure-tool';
+    static ID = 'custom-ruler';
 
     static FLAGS = {
-        CUSTOMMEASURETOOL: 'custom-measure-tool'
+        CUSTOMRULER: 'custom-ruler'
     }
 
     static TEMPLATES = {
-        CMT: `./modules/${this.ID}/templates/custom-measure-tool.hbs`
+        CustomRuler: `./modules/${this.ID}/templates/custom-ruler.hbs`
     }
 
     static SETTINGS = {
-        /*
-        DISTANCE_UNITS: 'distance-units',
-        TIME_UNITS: 'time-units',
-        DEFAULT_ACTION_TIME: 'default-action-time',
-        DEFAULT_ACCELERATION: 'default-acceleration',
         GM_CAN_SEE_ALL: 'gm-can-see-all'
-        */
     }
+
+    static SYSTEMRULER = "system ruler"
 
     static log(force, ...args) {
         const shouldLog = force || game.modules.get('_dev-mode')?.api?.getPackageDebugValue(this.ID);
@@ -155,16 +215,16 @@ class CMT {
     }
 }
 
-class CMTForm extends FormApplication {
+class CustomRulerForm extends FormApplication {
     static get defaultOptions() {
         const defaults = super.defaultOptions;
 
         const overrides = {
             height: 'auto',
             width: 1000,
-            id: CMT.id,
-            template: CMT.TEMPLATES.CMT,
-            title: "CUSTOM-MEASURE-TOOL.title",
+            id: CustomRuler.id,
+            template: CustomRuler.TEMPLATES.CustomRuler,
+            title: "CUSTOM-RULER.title",
             userId: game.userId,
             closeOnSubmit: false, // do not close when submitted
             submitOnChange: true, // submit when any input changes
@@ -177,21 +237,15 @@ class CMTForm extends FormApplication {
     }
 
     getData(options) {
-        // const otherVelocityTrackers = game.users.current?.isGM && game.settings.get(VelocityTrackerList.ID, VelocityTrackerList.SETTINGS.GM_CAN_SEE_ALL)
-        // ? VelocityTrackerData.otherVelocityTrackers(options.userId) : {}
-
-        // return {
-        //     velocitytrackers: VelocityTrackerData.getVelocityTrackersForUser(options.userId),
-        //     distanceUnits: game.settings.get(VelocityTrackerList.ID, VelocityTrackerList.SETTINGS.DISTANCE_UNITS),
-        //     timeUnits: game.settings.get(VelocityTrackerList.ID, VelocityTrackerList.SETTINGS.TIME_UNITS),
-        //     otherVelocityTrackers: otherVelocityTrackers
-        // }
+        return {
+            customRulers: CustomRulerData.getCustomRulersForUser(options.userId)
+        }
     }
 
     async _updateObject(event, formData) {
-        //const expandedData = foundry.utils.expandObject(formData);
+        const expandedData = foundry.utils.expandObject(formData);
 
-        // await VelocityTrackerData.updateUserVelocityTrackers(this.options.userId, expandedData);
+        await CustomRulerData.updateUserCustomRuler(this.options.userId, expandedData);
 
         this.render();
     }
@@ -199,61 +253,65 @@ class CMTForm extends FormApplication {
     activateListeners(html) {
         super.activateListeners(html);
 
-        // html.on('click', "[data-action]", this._handleButtonClick.bind(this));
+        html.on('click', "[data-action]", this._handleButtonClick.bind(this));
     }
 
-    // async _handleButtonClick(event) {
-    //     const clickedElement = $(event.currentTarget);
-    //     const action = clickedElement.data().action;
-    //     const velocityTrackerId = clickedElement.parents('[data-velocity-tracker-id]')?.data()?.velocityTrackerId;
+    async _handleButtonClick(event) {
+        const clickedElement = $(event.currentTarget);
+        const action = clickedElement.data().action;
+        const customRulerId = clickedElement.parents('[data-custom-ruler-id]')?.data()?.customRulerId;
 
-    //     switch(action) {
-    //         case 'create': {
-    //             await VelocityTrackerData.createVelocityTracker(this.options.userId);
-    //             this.render();
-    //             break;
-    //         }
+        switch(action) {
+            case 'create': {
+                await CustomRulerData.createCustomRuler(this.options.userId);
+                this.render();
+                break;
+            }
 
-    //         case 'delete': {
-    //             const confirmed = await Dialog.confirm({
-    //                 title: game.i18n.localize("VELOCITY-TRACKER.confirms.deleteConfirm.Title"),
-    //                 content: game.i18n.localize("VELOCITY-TRACKER.confirms.deleteConfirm.Content")
-    //             });
+            case 'delete': {
+                const confirmed = await Dialog.confirm({
+                    title: game.i18n.localize("CUSTOM-RULER.confirm.deleteConfirm.Title"),
+                    content: game.i18n.localize("CUSTOM-RULER.confirm.deleteConfirm.Content")
+                });
 
-    //             if (confirmed) {
-    //                 await VelocityTrackerData.deleteVelocityTracker(velocityTrackerId);
-    //                 this.render();
-    //             }
+                if (confirmed) {
+                    await CustomRulerData.deleteCustomRuler(customRulerId);
+                    this.render();
+                }
 
-    //             break;
-    //         }
+                break;
+            }
 
-    //         case 'progress': {
-    //             const relevantVelocityTracker = VelocityTrackerData.allVelocityTrackers[velocityTrackerId];
+            case 'activate': {
+                let updates = {};
 
-    //             const actionTime = (relevantVelocityTracker.actionTime.includes("/")) ? eval(1/eval(relevantVelocityTracker.actionTime)) : eval(relevantVelocityTracker.actionTime);
+                for (const [key, value] of Object.entries(CustomRulerData.getCustomRulersForUser(this.options.userId))) {
+                    updates[`${key}.active`] = (key === customRulerId) ? true : false
+                }
 
-    //             const elapsedTime = relevantVelocityTracker.elapsedTime + actionTime;
+                await CustomRulerData.updateUserCustomRuler(this.options.userId, updates)
 
-    //             let newVelocity = Math.round((relevantVelocityTracker.movementAction / actionTime) + 
-    //                 (relevantVelocityTracker.acceleration * elapsedTime**2));
+                CustomRulerData.setRuler(this.options.userId)
 
-    //             if (relevantVelocityTracker.maxVelocity !== null) newVelocity = minAbsoluteValue(eval(relevantVelocityTracker.maxVelocity), newVelocity);
+                break;
+            }
 
-    //             const update = {
-    //                 ["elapsedTime"]: elapsedTime,
-    //                 ["currentVelocity"]: newVelocity
-    //             };
+            default:
+                CustomRuler.log(false, 'Invalid action detected', action)
+        }
+    }
 
-    //             VelocityTrackerData.updateVelocityTracker(relevantVelocityTracker.id, update);
+    verifySystemRulerExists(userId) {
+        let systemRulerExists = false
 
-    //             this.render();
-        
-    //             break;
-    //         }
+        if (CustomRulerData.getCustomRulersForUser(userId) !== undefined) {
+            for (const [key, value] of Object.entries(CustomRulerData.getCustomRulersForUser(userId))) {
+                if (value.label === CustomRuler.SYSTEMRULER) systemRulerExists = true
+            }
+        }
 
-    //         default:
-    //             VelocityTrackerList.log(false, 'Invalid action detected', action)
-    //     }
-    // }
+        if (!systemRulerExists) {
+            CustomRulerData.createCustomRuler(userId, {label: CustomRuler.SYSTEMRULER, protected: true, active: true})
+        }
+    }
 }

@@ -1,0 +1,36 @@
+{{log 'CMT-template' this}}
+<form>
+    <div class="flexrow">
+        <div>Active?</div>
+        <div>Label</div>
+        <div>Equation</div>
+        <div>Bounds (lower, upper)</div>
+    </div>
+
+    {{#each customRulers}}
+    <div class="flexrow" data-custom-ruler-id="{{id}}">
+        <input type="checkbox" name="{{id}}.active" {{#if active}}checked{{/if}} data-action="activate"><br>
+
+        <input type="text" value="{{label}}" name="{{id}}.label" data-dtype="String" {{#if protected}}disabled{{/if}} />
+
+        <input type="text" value="{{equation}}" name="{{id}}.equation" data-dtype="String" {{#if protected}}disabled{{/if}} />
+
+        <input type="Number" value="{{lowerBound}}" name="{{id}}.lowerBound" data-dtype="Number" {{#if protected}}disabled{{/if}} />
+
+        <input type="Number" value="{{upperBound}}" name="{{id}}.upperBound" data-dtype="Number" {{#if protected}}disabled{{/if}} />
+
+        {{#unless protected}}
+        <button type="button" title="{{localize "CUSTOM-RULER.delete-custom-ruler"}}" data-action="delete" class="flex0 custom-ruler-icon-button" >
+            <i class="fas fa-trash"></i>
+        </button>
+        {{/unless}}
+    </div>
+    {{/each}}
+
+    <span></span>
+
+    <button type="button" class="custom-ruler-button" data-action="create">
+        <i class="fas fa-plus"></i>
+        {{localize "CUSTOM-RULER.add"}}
+    </button>
+</form>
