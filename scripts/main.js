@@ -7,12 +7,10 @@ Hooks.once('devModeReady', ({ registerPackageDebugFlag }) => {
 });
 
 Hooks.on("renderApplication", (controls, ...args) => {
-    CustomRuler.log(false, "renderApplication");
-
     if (controls.tool === "ruler") {
         const userId = game.userId;
 
-        CustomRuler.customRulerForm.verifySystemRulerExists(userId)
+        // CustomRuler.customRulerForm.verifySystemRulerExists(userId)
 
         CustomRuler.customRulerForm.render(true, {userId})
     }
@@ -21,23 +19,24 @@ Hooks.on("renderApplication", (controls, ...args) => {
 /**
  * A single CustomRuler
  * @typedef {Object} CustomRuler
- * @property {string} userId - the user's id which owns this VelocityTracker
- * @property {string} id - A unique ID to identify this VelocityTracker
+ * @property {string} userId - the user's id which owns this CustomRuler
+ * @property {string} id - A unique ID to identify this CustomRuler
  * @property {string} label - The name of the character/vehicle being tracked
  * @property {string} equation - rules for the new ruler
  * @property {Boolean} active - which ruler is being used
  * @property {float} lowerBound - which ruler is being used
  * @property {float} upperBound - which ruler is being used
  * @property {Boolean} protected - can a ruler be edited? These would be system rulers or those defined by the GM
+ * @property {Boolean} share - should other players be able to see this ruler? Only used by GMs
  */
 class CustomRulerData {
         static get allCustomRulers() {
             const allCustomRulers = game.users.reduce((accumulator, user) => {
-                const userVelocityTrackers = this.getCustomRulersForUser(user.id);
+                const userCustomRulers = this.getCustomRulersForUser(user.id);
     
                 return {
                     ...accumulator,
-                    ...userVelocityTrackers
+                    ...userCustomRulers
                 }
             }, {});
     
@@ -50,13 +49,12 @@ class CustomRulerData {
 
         static getActiveRulerForUser(userId) {
             for (const [key, value] of Object.entries(this.getCustomRulersForUser(userId))) {
-                CustomRuler.log(false, value)
                 if (value.active) return this.allCustomRulers[key]
             }
         }
 
         static otherUsersCustomRulers(userId) {
-            const otherUsersCustomRulers = game.users.reduce((accumulator, user) => {1
+            const otherUsersCustomRulers = game.users.reduce((accumulator, user) => {
                 if (user.id !== userId) {
                     const userCustomRulers = this.getCustomRulersForUser(user.id);
     
@@ -71,8 +69,6 @@ class CustomRulerData {
         }
     
         static createCustomRuler(userId, data) {
-            CustomRuler.log(false, data)
-
             const newCustomRuler = {
                 userId,
                 id: foundry.utils.randomID(16),
@@ -89,6 +85,27 @@ class CustomRulerData {
     
             return game.users.get(userId)?.setFlag(CustomRuler.ID, CustomRuler.FLAGS.CUSTOMRULER, update)
         }
+
+        static copyCustomRuler(newUserId, originalUserId, rulerId) {
+            const relevantCustomRuler = CustomRulerData.getCustomRulersForUser(originalUserId)[rulerId];
+
+            const copyCustomRuler = {
+                userId : newUserId,
+                id : relevantCustomRuler.id,
+                label: relevantCustomRuler.label,
+                equation : relevantCustomRuler.equation,
+                lowerBound : relevantCustomRuler.equation,
+                upperBound : relevantCustomRuler.equation,
+                active: false,
+                protected: true,
+            }
+
+            const update = {
+                [copyCustomRuler.id]: copyCustomRuler
+            }
+
+            return game.users.get(newUserId)?.setFlag(CustomRuler.ID, CustomRuler.FLAGS.CUSTOMRULER, update)
+        }
     
         static updateCustomRuler(customRulerId, updateData) {
             const relevantCustomRuler = this.allCustomRulers[customRulerId];
@@ -104,40 +121,41 @@ class CustomRulerData {
             return game.users.get(userId)?.setFlag(CustomRuler.ID, CustomRuler.FLAGS.CUSTOMRULER, updateData);
         }
     
-        static deleteCustomRuler(customRulerId) {
-            CustomRuler.log(false, customRulerId)
-
-            const relevantCustomRuler = this.allCustomRulers[customRulerId];
+        static deleteCustomRuler(customRulerId, userId) {
+            const relevantCustomRuler = CustomRulerData.getCustomRulersForUser(userId)[customRulerId];
     
             const keyDeletion = {
                 [`-=${customRulerId}`]: null
             }
-
-            CustomRuler.log(false, relevantCustomRuler)
     
             return game.users.get(relevantCustomRuler.userId)?.setFlag(CustomRuler.ID, CustomRuler.FLAGS.CUSTOMRULER, keyDeletion)
         }
 
-        static setRuler(userId) {
-            /*
-            const relevantCustomRuler = CustomRulerData.getActiveRulerForUser(userId)
+        static addSharedRuler(originalUserId, relevantCustomRulerId) {
+            game.users.forEach(user => {
+                if (user.id !== originalUserId) {
+                    CustomRulerData.copyCustomRuler(user.id, originalUserId, relevantCustomRulerId)
+                }
+            }, {});
+        }
 
-            if (relevantCustomRuler.label === CustomRuler.SYSTEMRULER) {
-                CustomRuler.log(false, "lets use the system ruler!")
-                Ruler.prototype._getSegmentLabel = CustomRuler.systemRuler._getSegmentLabel
+        static deleteSharedRuler(originalUserId, customRulerId) {
+            game.users.forEach(user => {
+                if (user.id !== originalUserId) {
+                    CustomRulerData.deleteCustomRuler(customRulerId, user.id)
+                }
+            }, {});
+        }
 
-                return
-            }
-            */
-
+        static setRuler() {
             Ruler.prototype._getSegmentLabel = function _getSegmentLabel(segmentDistance, totalDistance, isTotal) {
-                const relevantCustomRuler = CustomRulerData.getActiveRulerForUser(userId)
+                const relevantCustomRuler = CustomRulerData.getActiveRulerForUser(this.user.id)
 
                 let newDistance = eval(relevantCustomRuler.equation.replaceAll("x", segmentDistance.distance.toString()))
                 
-                if (relevantCustomRuler.lowerBound !== null) newDistance = Math.max(newDistance, relevantCustomRuler.lowerBound)
+                if (!isNaN(relevantCustomRuler.lowerBound)) newDistance = Math.max(newDistance, relevantCustomRuler.lowerBound)
 
-                if (relevantCustomRuler.upperBound !== null) newDistance = Math.min(newDistance, relevantCustomRuler.upperBound)
+                if (!isNaN(relevantCustomRuler.upperBound)) newDistance = Math.min(newDistance, relevantCustomRuler.upperBound)
 
                 let output = "[" + Math.round(segmentDistance.distance) + " m]\n" + newDistance + " " + relevantCustomRuler.label
         
@@ -145,51 +163,22 @@ class CustomRulerData {
             };
         }
 }
-
 class CustomRuler {
     static initialize() {
         this.customRulerForm = new CustomRulerForm()
 
-        // gm can see all custom rulers
-        game.settings.register(this.ID, this.SETTINGS.GM_CAN_SEE_ALL, {
-            name: `CUSTOM-RULER.settings.${this.SETTINGS.GM_CAN_SEE_ALL}.Name`,
-            default: true,
-            type: Boolean,
-            scope: 'world',
-            config: true,
-            hint: `CUSTOM-RULER.settings.${this.SETTINGS.GM_CAN_SEE_ALL}.Hint`,
-            onChange: () => ui.players.render()
-        })
+        CustomRulerData.setRuler()
 
-        game.settings.register(this.ID, this.SETTINGS.SYSTEM_RULER_EQUATION, {
-            name: `CUSTOM-RULER.settings.${this.SETTINGS.SYSTEM_RULER_EQUATION}.Name`,
-            default: "",
-            type: String,
-            scope: 'world',
-            config: true,
-            hint: `CUSTOM-RULER.settings.${this.SETTINGS.SYSTEM_RULER_EQUATION}.Hint`,
-            onChange: () => ui.players.render()
-        })
-
-        game.settings.register(this.ID, this.SETTINGS.SYSTEM_RULER_LOWER_BOUND, {
-            name: `CUSTOM-RULER.settings.${this.SETTINGS.SYSTEM_RULER_LOWER_BOUND}.Name`,
-            default: "",
-            type: String,
-            scope: 'world',
-            config: true,
-            hint: `CUSTOM-RULER.settings.${this.SETTINGS.SYSTEM_RULER_LOWER_BOUND}.Hint`,
-            onChange: () => ui.players.render()
-        })
-
-        game.settings.register(this.ID, this.SETTINGS.SYSTEM_RULER_UPPER_BOUND, {
-            name: `CUSTOM-RULER.settings.${this.SETTINGS.SYSTEM_RULER_UPPER_BOUND}.Name`,
-            default: "",
-            type: String,
-            scope: 'world',
-            config: true,
-            hint: `CUSTOM-RULER.settings.${this.SETTINGS.SYSTEM_RULER_UPPER_BOUND}.Hint`,
-            onChange: () => ui.players.render()
-        })
+        // // gm can see all custom rulers
+        // game.settings.register(this.ID, this.SETTINGS.GM_CAN_SEE_ALL, {
+        //     name: `CUSTOM-RULER.settings.${this.SETTINGS.GM_CAN_SEE_ALL}.Name`,
+        //     default: true,
+        //     type: Boolean,
+        //     scope: 'world',
+        //     config: true,
+        //     hint: `CUSTOM-RULER.settings.${this.SETTINGS.GM_CAN_SEE_ALL}.Hint`,
+        //     onChange: () => ui.players.render()
+        // })
     }
 
     static ID = 'custom-ruler';
@@ -203,13 +192,9 @@ class CustomRuler {
     }
 
     static SETTINGS = {
-        GM_CAN_SEE_ALL: 'gm-can-see-all',
-        SYSTEM_RULER_EQUATION: 'system_ruler_equation',
-        SYSTEM_RULER_LOWER_BOUND: 'system_ruler_lower_bound',
-        SYSTEM_RULER_UPPER_BOUND: 'system_ruler_upper_bound',
+        // GM_CAN_SEE_ALL: 'gm-can-see-all',
+        // HIDE_GM_LABEL: 'hide-gm-label
     }
-
-    static SYSTEMRULER = "system ruler"
 
     static log(force, ...args) {
         const shouldLog = force || game.modules.get('_dev-mode')?.api?.getPackageDebugValue(this.ID);
@@ -219,7 +204,6 @@ class CustomRuler {
         }
     }
 }
-
 class CustomRulerForm extends FormApplication {
     static get defaultOptions() {
         const defaults = super.defaultOptions;
@@ -243,7 +227,8 @@ class CustomRulerForm extends FormApplication {
 
     getData(options) {
         return {
-            customRulers: CustomRulerData.getCustomRulersForUser(options.userId)
+            isGM : game.users.get(options.userId)?.isGM,
+            customRulers: CustomRulerData.getCustomRulersForUser(options.userId),
         }
     }
 
@@ -265,6 +250,7 @@ class CustomRulerForm extends FormApplication {
         const clickedElement = $(event.currentTarget);
         const action = clickedElement.data().action;
         const customRulerId = clickedElement.parents('[data-custom-ruler-id]')?.data()?.customRulerId;
+        const relevantCustomRuler = CustomRulerData.getCustomRulersForUser(game.userId)[customRulerId]
 
         switch(action) {
             case 'create': {
@@ -279,8 +265,10 @@ class CustomRulerForm extends FormApplication {
                     content: game.i18n.localize("CUSTOM-RULER.confirm.deleteConfirm.Content")
                 });
 
+                if (relevantCustomRuler.shared) CustomRulerData.deleteSharedRuler(game.userId, customRulerId)
+
                 if (confirmed) {
-                    await CustomRulerData.deleteCustomRuler(customRulerId);
+                    await CustomRulerData.deleteCustomRuler(customRulerId, game.userId);
                     this.render();
                 }
 
@@ -296,27 +284,21 @@ class CustomRulerForm extends FormApplication {
 
                 await CustomRulerData.updateUserCustomRuler(this.options.userId, updates)
 
-                CustomRulerData.setRuler(this.options.userId)
+                break;
+            }
+
+            case 'share' : {
+                const shouldShare = ! relevantCustomRuler.shared
+
+                if (shouldShare) return CustomRulerData.addSharedRuler(game.userId, customRulerId);
+                
+                return CustomRulerData.deleteSharedRuler(game.userId, customRulerId)
 
                 break;
             }
 
             default:
                 CustomRuler.log(false, 'Invalid action detected', action)
-        }
-    }
-
-    verifySystemRulerExists(userId) {
-        let systemRulerExists = false
-
-        if (CustomRulerData.getCustomRulersForUser(userId) !== undefined) {
-            for (const [key, value] of Object.entries(CustomRulerData.getCustomRulersForUser(userId))) {
-                if (value.label === CustomRuler.SYSTEMRULER) systemRulerExists = true
-            }
-        }
-
-        if (!systemRulerExists) {
-            CustomRulerData.createCustomRuler(userId, {label: CustomRuler.SYSTEMRULER, protected: true, active: true})
         }
     }
 }
