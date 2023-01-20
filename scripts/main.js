@@ -10,8 +10,6 @@ Hooks.on("renderApplication", (controls, ...args) => {
     if (controls.tool === "ruler") {
         const userId = game.userId;
 
-        // CustomRuler.customRulerForm.verifySystemRulerExists(userId)
-
         CustomRuler.customRulerForm.render(true, {userId})
     }
 });
@@ -30,155 +28,158 @@ Hooks.on("renderApplication", (controls, ...args) => {
  * @property {Boolean} share - should other players be able to see this ruler? Only used by GMs
  */
 class CustomRulerData {
-        static get allCustomRulers() {
-            const allCustomRulers = game.users.reduce((accumulator, user) => {
-                const userCustomRulers = this.getCustomRulersForUser(user.id);
+    static get allCustomRulers() {
+        const allCustomRulers = game.users.reduce((accumulator, user) => {
+            const userCustomRulers = this.getCustomRulersForUser(user.id);
+
+            return {
+                ...accumulator,
+                ...userCustomRulers
+            }
+        }, {});
+
+        return allCustomRulers
+    }
     
+    static getCustomRulersForUser(userId) {
+        return game.users.get(userId)?.getFlag(CustomRuler.ID, CustomRuler.FLAGS.CUSTOMRULER)
+    }
+
+    static getActiveRulerForUser(userId) {
+        for (const [key, value] of Object.entries(this.getCustomRulersForUser(userId))) {
+            if (value.active) return this.allCustomRulers[key]
+        }
+    }
+
+    static otherUsersCustomRulers(userId) {
+        const otherUsersCustomRulers = game.users.reduce((accumulator, user) => {
+            if (user.id !== userId) {
+                const userCustomRulers = this.getCustomRulersForUser(user.id);
+
                 return {
                     ...accumulator,
                     ...userCustomRulers
                 }
-            }, {});
-    
-            return allCustomRulers
-        }
-        
-        static getCustomRulersForUser(userId) {
-            return game.users.get(userId)?.getFlag(CustomRuler.ID, CustomRuler.FLAGS.CUSTOMRULER)
-        }
-
-        static getActiveRulerForUser(userId) {
-            for (const [key, value] of Object.entries(this.getCustomRulersForUser(userId))) {
-                if (value.active) return this.allCustomRulers[key]
             }
+        }, {});
+
+        return otherUsersCustomRulers
+    }
+
+    static createCustomRuler(userId, data) {
+        const newCustomRuler = {
+            userId,
+            id: foundry.utils.randomID(16),
+            equation: "",
+            lowerBound: null,
+            upperBound: null,
+            active: false,
+            ...data
         }
 
-        static otherUsersCustomRulers(userId) {
-            const otherUsersCustomRulers = game.users.reduce((accumulator, user) => {
-                if (user.id !== userId) {
-                    const userCustomRulers = this.getCustomRulersForUser(user.id);
-    
-                    return {
-                        ...accumulator,
-                        ...userCustomRulers
-                    }
-                }
-            }, {});
-    
-            return otherUsersCustomRulers
+        const update = {
+            [newCustomRuler.id]: newCustomRuler
         }
-    
-        static createCustomRuler(userId, data) {
-            const newCustomRuler = {
-                userId,
-                id: foundry.utils.randomID(16),
-                equation: "",
-                lowerBound: null,
-                upperBound: null,
-                active: false,
-                ...data
+
+        return game.users.get(userId)?.setFlag(CustomRuler.ID, CustomRuler.FLAGS.CUSTOMRULER, update)
+    }
+
+    static copyCustomRuler(newUserId, originalUserId, rulerId) {
+        const relevantCustomRuler = CustomRulerData.getCustomRulersForUser(originalUserId)[rulerId];
+
+        const copyCustomRuler = {
+            userId : newUserId,
+            id : relevantCustomRuler.id,
+            label: relevantCustomRuler.label,
+            equation : relevantCustomRuler.equation,
+            lowerBound : relevantCustomRuler.equation,
+            upperBound : relevantCustomRuler.equation,
+            active: false,
+            protected: true,
+        }
+
+        const update = {
+            [copyCustomRuler.id]: copyCustomRuler
+        }
+
+        return game.users.get(newUserId)?.setFlag(CustomRuler.ID, CustomRuler.FLAGS.CUSTOMRULER, update)
+    }
+
+    static updateCustomRuler(customRulerId, updateData) {
+        const relevantCustomRuler = this.allCustomRulers[customRulerId];
+
+        const update = {
+            [customRulerId]: updateData
+        }
+
+        return game.users.get(relevantCustomRuler.userId)?.setFlag(CustomRuler.ID, CustomRuler.FLAGS.CUSTOMRULER, update);
+    }
+
+    static updateUserCustomRuler(userId, updateData) {
+        return game.users.get(userId)?.setFlag(CustomRuler.ID, CustomRuler.FLAGS.CUSTOMRULER, updateData);
+    }
+
+    static deleteCustomRuler(customRulerId, userId) {
+        const relevantCustomRuler = CustomRulerData.getCustomRulersForUser(userId)[customRulerId];
+
+        const keyDeletion = {
+            [`-=${customRulerId}`]: null
+        }
+
+        return game.users.get(relevantCustomRuler.userId)?.setFlag(CustomRuler.ID, CustomRuler.FLAGS.CUSTOMRULER, keyDeletion)
+    }
+
+    static addSharedRuler(originalUserId, relevantCustomRulerId) {
+        game.users.forEach(user => {
+            if (user.id !== originalUserId) {
+                CustomRulerData.copyCustomRuler(user.id, originalUserId, relevantCustomRulerId)
             }
-    
-            const update = {
-                [newCustomRuler.id]: newCustomRuler
+        }, {});
+    }
+
+    static deleteSharedRuler(originalUserId, customRulerId) {
+        game.users.forEach(user => {
+            if (user.id !== originalUserId) {
+                CustomRulerData.deleteCustomRuler(customRulerId, user.id)
             }
-    
-            return game.users.get(userId)?.setFlag(CustomRuler.ID, CustomRuler.FLAGS.CUSTOMRULER, update)
-        }
+        }, {});
+    }
 
-        static copyCustomRuler(newUserId, originalUserId, rulerId) {
-            const relevantCustomRuler = CustomRulerData.getCustomRulersForUser(originalUserId)[rulerId];
+    static setRuler() {
+        Ruler.prototype._getSegmentLabel = function _getSegmentLabel(segmentDistance, totalDistance, isTotal) {
+            const relevantCustomRuler = CustomRulerData.getActiveRulerForUser(this.user.id)
 
-            const copyCustomRuler = {
-                userId : newUserId,
-                id : relevantCustomRuler.id,
-                label: relevantCustomRuler.label,
-                equation : relevantCustomRuler.equation,
-                lowerBound : relevantCustomRuler.equation,
-                upperBound : relevantCustomRuler.equation,
-                active: false,
-                protected: true,
-            }
+            let newEquation = relevantCustomRuler.equation.toLowerCase();
 
-            const update = {
-                [copyCustomRuler.id]: copyCustomRuler
+            for (const [key, value] of Object.entries(CustomRuler.RULERTRANSLATIONS)) {
+                newEquation = newEquation.replaceAll(key, value)
             }
 
-            return game.users.get(newUserId)?.setFlag(CustomRuler.ID, CustomRuler.FLAGS.CUSTOMRULER, update)
-        }
-    
-        static updateCustomRuler(customRulerId, updateData) {
-            const relevantCustomRuler = this.allCustomRulers[customRulerId];
-    
-            const update = {
-                [customRulerId]: updateData
+            const distance = segmentDistance.distance.toString()
+
+            let newDistance = Math.round(eval(newEquation))
+
+            if (!isNaN(parseInt(relevantCustomRuler.lowerBound) && newDistance < relevantCustomRuler.lowerBound)) {
+                newDistance = Math.max(newDistance, relevantCustomRuler.lowerBound)
             }
-    
-            return game.users.get(relevantCustomRuler.userId)?.setFlag(CustomRuler.ID, CustomRuler.FLAGS.CUSTOMRULER, update);
-        }
-    
-        static updateUserCustomRuler(userId, updateData) {
-            return game.users.get(userId)?.setFlag(CustomRuler.ID, CustomRuler.FLAGS.CUSTOMRULER, updateData);
-        }
-    
-        static deleteCustomRuler(customRulerId, userId) {
-            const relevantCustomRuler = CustomRulerData.getCustomRulersForUser(userId)[customRulerId];
-    
-            const keyDeletion = {
-                [`-=${customRulerId}`]: null
+
+            if (!isNaN(parseInt(relevantCustomRuler.upperBound)) && newDistance > relevantCustomRuler.upperBound) {
+                newDistance = Math.min(newDistance, relevantCustomRuler.upperBound)
             }
+
+            const output = "[" + Math.round(segmentDistance.distance) + " m]\n" + newDistance + " " + relevantCustomRuler.label
     
-            return game.users.get(relevantCustomRuler.userId)?.setFlag(CustomRuler.ID, CustomRuler.FLAGS.CUSTOMRULER, keyDeletion)
-        }
+            return output
+        };
+    }
 
-        static addSharedRuler(originalUserId, relevantCustomRulerId) {
-            game.users.forEach(user => {
-                if (user.id !== originalUserId) {
-                    CustomRulerData.copyCustomRuler(user.id, originalUserId, relevantCustomRulerId)
-                }
-            }, {});
-        }
-
-        static deleteSharedRuler(originalUserId, customRulerId) {
-            game.users.forEach(user => {
-                if (user.id !== originalUserId) {
-                    CustomRulerData.deleteCustomRuler(customRulerId, user.id)
-                }
-            }, {});
-        }
-
-        static setRuler() {
-            Ruler.prototype._getSegmentLabel = function _getSegmentLabel(segmentDistance, totalDistance, isTotal) {
-                const relevantCustomRuler = CustomRulerData.getActiveRulerForUser(this.user.id)
-
-                let newDistance = eval(relevantCustomRuler.equation.replaceAll("x", segmentDistance.distance.toString()))
-                
-                if (!isNaN(relevantCustomRuler.lowerBound)) newDistance = Math.max(newDistance, relevantCustomRuler.lowerBound)
-
-                if (!isNaN(relevantCustomRuler.upperBound)) newDistance = Math.min(newDistance, relevantCustomRuler.upperBound)
-
-                let output = "[" + Math.round(segmentDistance.distance) + " m]\n" + newDistance + " " + relevantCustomRuler.label
-        
-                return output
-            };
-        }
+    
 }
 class CustomRuler {
     static initialize() {
         this.customRulerForm = new CustomRulerForm()
 
         CustomRulerData.setRuler()
-
-        // // gm can see all custom rulers
-        // game.settings.register(this.ID, this.SETTINGS.GM_CAN_SEE_ALL, {
-        //     name: `CUSTOM-RULER.settings.${this.SETTINGS.GM_CAN_SEE_ALL}.Name`,
-        //     default: true,
-        //     type: Boolean,
-        //     scope: 'world',
-        //     config: true,
-        //     hint: `CUSTOM-RULER.settings.${this.SETTINGS.GM_CAN_SEE_ALL}.Hint`,
-        //     onChange: () => ui.players.render()
-        // })
     }
 
     static ID = 'custom-ruler';
@@ -191,9 +192,18 @@ class CustomRuler {
         CustomRuler: `./modules/${this.ID}/templates/custom-ruler.hbs`
     }
 
-    static SETTINGS = {
-        // GM_CAN_SEE_ALL: 'gm-can-see-all',
-        // HIDE_GM_LABEL: 'hide-gm-label
+    static SETTINGS = {}
+
+    static RULERTRANSLATIONS = {
+        "x": "distance",
+        "sin(": "Math.sin(",
+        "cos(": "Math.cos(",
+        "tan(": "Math.tan(",
+        "log(": "Math.log(",
+        "log2(": "Math.log2(",
+        "log10(": "Math.log10(",
+        "ceil(": "Math.ceil(",
+        "floor(": "Math.floor("
     }
 
     static log(force, ...args) {
@@ -210,7 +220,7 @@ class CustomRulerForm extends FormApplication {
 
         const overrides = {
             height: 'auto',
-            width: 1000,
+            width: 600,
             id: CustomRuler.id,
             template: CustomRuler.TEMPLATES.CustomRuler,
             title: "CUSTOM-RULER.title",
