@@ -159,7 +159,7 @@ class CustomRulerData {
 
             let newDistance = Math.round(eval(newEquation))
 
-            if (!isNaN(parseInt(relevantCustomRuler.lowerBound) && newDistance < relevantCustomRuler.lowerBound)) {
+            if (!isNaN(parseInt(relevantCustomRuler.lowerBound)) && newDistance < relevantCustomRuler.lowerBound) {
                 newDistance = Math.max(newDistance, relevantCustomRuler.lowerBound)
             }
 
