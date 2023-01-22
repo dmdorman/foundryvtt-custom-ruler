@@ -23,7 +23,7 @@ After defining a few rulers it will look something like the image below for play
 or for GMs it will look like the image below.
 
 <p align="center">
-  <img src="https://github.com/dmdorman/foundryvtt-custom-ruler/blob/main/images/gm-view.PNG?raw=true" />
+  <img src="https://github.com/dmdorman/foundryvtt-custom-ruler/blob/main/images/dm-view.PNG?raw=true" />
 </p>
 
 ## Custom Ruler Fields
