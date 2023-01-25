@@ -221,7 +221,7 @@ class CustomRulerForm extends FormApplication {
         const overrides = {
             height: 'auto',
             width: 600,
-            id: CustomRuler.id,
+            id: CustomRuler.ID,
             template: CustomRuler.TEMPLATES.CustomRuler,
             title: "CUSTOM-RULER.title",
             userId: game.userId,
