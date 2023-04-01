@@ -259,8 +259,6 @@ class CustomRulerForm extends FormApplication {
     async _handleButtonClick(event) {
         const clickedElement = $(event.currentTarget);
         const action = clickedElement.data().action;
-        const customRulerId = clickedElement.parents('[data-custom-ruler-id]')?.data()?.customRulerId;
-        const relevantCustomRuler = CustomRulerData.getCustomRulersForUser(game.userId)[customRulerId]
 
         switch(action) {
             case 'create': {
@@ -270,6 +268,9 @@ class CustomRulerForm extends FormApplication {
             }
 
             case 'delete': {
+                const customRulerId = clickedElement.parents('[data-custom-ruler-id]')?.data()?.customRulerId;
+                const relevantCustomRuler = CustomRulerData.getCustomRulersForUser(game.userId)[customRulerId]
+
                 const confirmed = await Dialog.confirm({
                     title: game.i18n.localize("CUSTOM-RULER.confirm.deleteConfirm.Title"),
                     content: game.i18n.localize("CUSTOM-RULER.confirm.deleteConfirm.Content")
@@ -286,6 +287,9 @@ class CustomRulerForm extends FormApplication {
             }
 
             case 'activate': {
+                const customRulerId = clickedElement.parents('[data-custom-ruler-id]')?.data()?.customRulerId;
+                const relevantCustomRuler = CustomRulerData.getCustomRulersForUser(game.userId)[customRulerId]
+
                 let updates = {};
 
                 for (const [key, value] of Object.entries(CustomRulerData.getCustomRulersForUser(this.options.userId))) {
@@ -298,6 +302,9 @@ class CustomRulerForm extends FormApplication {
             }
 
             case 'share' : {
+                const customRulerId = clickedElement.parents('[data-custom-ruler-id]')?.data()?.customRulerId;
+                const relevantCustomRuler = CustomRulerData.getCustomRulersForUser(game.userId)[customRulerId]
+
                 const shouldShare = ! relevantCustomRuler.shared
 
                 if (shouldShare) return CustomRulerData.addSharedRuler(game.userId, customRulerId);
@@ -309,6 +316,7 @@ class CustomRulerForm extends FormApplication {
 
             default:
                 CustomRuler.log(false, 'Invalid action detected', action)
+                break;
         }
     }
 }
